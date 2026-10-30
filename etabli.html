@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'établi – recherche de cartes et construction de decks Magic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Righteous&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#e6ebe4;
+  --panel:#f5f7f2;
+  --ink:#1b2620;
+  --muted:#5b695f;
+  --line:#c7d0c5;
+  --felt:#1d3730;
+  --felt-2:#274a40;
+  --felt-3:#31584c;
+  --felt-ink:#eaf1e8;
+  --felt-muted:#a1b8ab;
+  --brass:#9b6f22;
+  --brass-hi:#b8862d;
+  --bad:#b23b2a;
+  --bad-felt:#f2a493;
+  --good:#2c7549;
+  --good-felt:#9fdcb3;
+  --serif:"Righteous", "Trebuchet MS", system-ui, sans-serif;
+  --sans:"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:1rem}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
+
+.top{display:flex;align-items:baseline;gap:1rem;padding:.9rem 1.25rem .4rem}
+.top h1{font:400 1.7rem/1 var(--serif);margin:0;letter-spacing:.02em}
+.top .sub{margin:0;color:var(--muted);font-size:.9rem}
+.langpick{margin-left:auto;display:flex;gap:.5rem;align-items:center;font-size:.85rem;color:var(--muted)}
+.langpick select{background:#fff;border:1px solid var(--line);border-radius:6px;padding:.3rem .5rem;color:var(--ink)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:1.1rem;padding:0 1.25rem 1.5rem;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}.deck{position:static;max-height:none}}
+
+/* ---------- Recherche ---------- */
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.9rem;display:grid;gap:.7rem}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:end}
+.f{display:grid;gap:.2rem;font-size:.82rem;color:var(--muted);flex:1 1 140px;min-width:0}
+.f.wide{flex:2 1 260px}
+.f.narrow{flex:0 0 74px}
+.f input,.f select{background:#fff;border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;color:var(--ink);width:100%;min-width:0}
+.f input:focus,.f select:focus{border-color:var(--brass-hi)}
+.mana{display:flex;gap:.35rem}
+.mana button{width:2.1rem;height:2.1rem;border-radius:50%;border:2px solid transparent;font-weight:600;font-size:.85rem;color:#1b1b1b;opacity:.55;transition:opacity .12s, transform .12s, border-color .12s}
+.mana button[aria-pressed="true"]{opacity:1;border-color:var(--ink);transform:scale(1.06)}
+.check{display:flex;gap:.4rem;align-items:center;font-size:.85rem;color:var(--muted);padding-bottom:.45rem}
+.linkbtn{background:none;border:0;color:var(--brass);text-decoration:underline;padding:.45rem .2rem;font-size:.88rem}
+
+.resbar{display:flex;justify-content:space-between;align-items:baseline;margin:.9rem .2rem .5rem}
+.resbar strong{font:400 1.15rem var(--serif)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:.9rem}
+.tile{display:flex;flex-direction:column;gap:.35rem}
+.art{position:relative;display:block;padding:0;border:0;background:#cfd6cc;border-radius:4.7% / 3.4%;overflow:hidden;aspect-ratio:488/680;box-shadow:0 1px 2px rgba(20,30,25,.35)}
+.art:hover{box-shadow:0 0 0 2px var(--brass-hi)}
+.art img{display:block;width:100%;height:100%;object-fit:cover}
+.noimg{display:grid;place-items:center;height:100%;padding:.6rem;text-align:center;font:400 .95rem var(--serif);color:var(--muted)}
+.badge{position:absolute;top:.35rem;right:.35rem;background:var(--felt);color:var(--felt-ink);border-radius:999px;font-size:.75rem;font-weight:600;padding:.1rem .5rem;display:none}
+.badge.on{display:block}
+.tname{font-size:.85rem;font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbtns{display:flex;gap:.3rem}
+.tbtns button{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:.28rem .3rem;font-size:.78rem;font-weight:500}
+.tbtns button:hover{border-color:var(--brass-hi);background:#fff}
+.more{display:block;margin:1.1rem auto 0;padding:.6rem 1.3rem;border-radius:8px;border:1px solid var(--brass);background:var(--brass);color:#fff;font-weight:600}
+.more:hover{background:var(--brass-hi)}
+.empty{grid-column:1/-1;padding:2rem 1rem;text-align:center;color:var(--muted)}
+
+/* ---------- Deck ---------- */
+.deck{position:sticky;top:.75rem;max-height:calc(100vh - 1.5rem);overflow:auto;background:var(--felt);color:var(--felt-ink);border-radius:12px;padding:1rem 1rem 1.2rem;display:grid;gap:.85rem;align-content:start}
+.deck ::selection{background:var(--brass-hi);color:#fff}
+.deck-head{display:grid;gap:.5rem}
+.deck-name{background:transparent;border:0;border-bottom:1px solid var(--felt-3);color:var(--felt-ink);font:400 1.45rem var(--serif);padding:.15rem 0;width:100%}
+.deck-name:focus{border-bottom-color:var(--brass-hi);outline:0}
+.deck-meta{display:flex;gap:.6rem;align-items:center;justify-content:space-between}
+.deck select{background:var(--felt-2);border:1px solid var(--felt-3);color:var(--felt-ink);border-radius:6px;padding:.4rem .5rem}
+.count{font:400 1.1rem var(--serif)}
+.count small{font:400 .82rem var(--sans);color:var(--felt-muted);margin-left:.3rem}
+.status{font-size:.86rem;display:grid;gap:.25rem}
+.status .ok{color:var(--good-felt)}
+.status .no{color:var(--bad-felt)}
+.actions{display:flex;flex-wrap:wrap;gap:.4rem}
+.actions button{background:var(--felt-2);border:1px solid var(--felt-3);color:var(--felt-ink);border-radius:6px;padding:.38rem .7rem;font-size:.85rem}
+.actions button:hover{background:var(--felt-3)}
+.actions .go{background:var(--brass);border-color:var(--brass);color:#fff;font-weight:600}
+.actions .go:hover{background:var(--brass-hi)}
+.saved{display:flex;gap:.4rem}
+.saved select{flex:1;min-width:0}
+
+.zone h3{font:400 1.05rem var(--serif);margin:.2rem 0 .3rem;display:flex;justify-content:space-between;color:var(--felt-ink)}
+.zone h3 span{font:400 .82rem var(--sans);color:var(--felt-muted)}
+.zone h4{font-size:.8rem;font-weight:500;color:var(--felt-muted);margin:.6rem 0 .15rem}
+.zone ul{list-style:none;margin:0;padding:0}
+.card-row{display:grid;grid-template-columns:1.6rem minmax(0,1fr) auto auto;gap:.3rem;align-items:center;padding:.12rem .25rem;border-radius:5px}
+.card-row:hover{background:var(--felt-2)}
+.card-row.bad{background:rgba(178,59,42,.28)}
+.card-row .q{font-weight:600;text-align:right;color:var(--felt-muted)}
+.card-row .nm{background:none;border:0;color:var(--felt-ink);text-align:left;padding:.1rem 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-row .nm:hover{text-decoration:underline}
+.card-row .cost{white-space:nowrap}
+.ctl{display:flex;gap:.15rem}
+.ctl button{width:1.55rem;height:1.55rem;border-radius:5px;border:1px solid var(--felt-3);background:transparent;color:var(--felt-ink);line-height:1;font-size:.95rem;padding:0}
+.ctl button:hover{background:var(--felt-3)}
+.emptydeck{color:var(--felt-muted);font-size:.9rem;padding:.4rem 0}
+
+.stats{border-top:1px solid var(--felt-3);padding-top:.8rem;display:grid;gap:.9rem}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;text-align:center}
+.nums b{display:block;font:400 1.25rem var(--serif)}
+.nums span{font-size:.75rem;color:var(--felt-muted)}
+.curve{display:flex;gap:.3rem;align-items:flex-end;height:110px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:.15rem}
+.bar i{display:block;width:100%;background:var(--brass-hi);border-radius:3px 3px 0 0;min-height:1px}
+.bar em{font-style:normal;font-size:.72rem;color:var(--felt-ink);min-height:1em}
+.bar b{font-weight:400;font-size:.72rem;color:var(--felt-muted)}
+.stats h4{margin:0 0 .35rem;font-size:.82rem;font-weight:500;color:var(--felt-muted)}
+.pipbar{display:flex;height:.7rem;border-radius:999px;overflow:hidden;background:var(--felt-2)}
+.pipbar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .8rem;margin-top:.4rem;font-size:.82rem}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem}
+.chips span{background:var(--felt-2);border-radius:999px;padding:.12rem .6rem;font-size:.8rem}
+
+.pip{display:inline-flex;align-items:center;justify-content:center;min-width:1.1rem;height:1.1rem;padding:0 .12rem;border-radius:999px;background:#cfcfc9;color:#1b1b1b;font-size:.68rem;font-weight:600;margin-right:1px;vertical-align:middle}
+
+/* ---------- Dialogues ---------- */
+dialog{border:0;border-radius:12px;padding:0;max-width:min(860px,94vw);width:100%;background:var(--panel);color:var(--ink);box-shadow:0 20px 60px rgba(10,20,15,.45)}
+dialog::backdrop{background:rgba(15,25,20,.6)}
+.dlg{padding:1.1rem 1.25rem 1.25rem;display:grid;gap:.8rem}
+.dlg h2{font:400 1.4rem var(--serif);margin:0}
+.dlg textarea{width:100%;min-height:280px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:.6rem;background:#fff;resize:vertical}
+.dlg .btns{display:flex;gap:.5rem;justify-content:flex-end;flex-wrap:wrap}
+.dlg .btns button{border-radius:7px;border:1px solid var(--line);background:#fff;padding:.45rem .9rem}
+.dlg .btns .go{background:var(--brass);border-color:var(--brass);color:#fff;font-weight:600}
+.dlg .hint{color:var(--muted);font-size:.85rem;margin:0}
+.dlg .warn{color:var(--bad);font-size:.88rem;margin:0}
+.detail{display:grid;grid-template-columns:minmax(200px,320px) 1fr;gap:1.2rem;padding:1.2rem}
+@media (max-width:640px){.detail{grid-template-columns:1fr}}
+.detail img{width:100%;border-radius:4.7% / 3.4%;display:block;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.detail h2{font:400 1.6rem var(--serif);margin:0 0 .15rem}
+.detail .type{color:var(--muted);margin:0 0 .6rem}
+.detail .oracle{white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:.7rem .8rem;margin:.5rem 0}
+.detail .leg{display:flex;flex-wrap:wrap;gap:.3rem;margin:.6rem 0}
+.detail .leg span{font-size:.78rem;border-radius:999px;padding:.1rem .55rem;background:#dfe6dc}
+.detail .leg span.b{background:#f0cfc8;color:var(--bad)}
+.detail .leg span.r{background:#f1e3b9}
+.detail .hint{color:var(--muted);font-size:.85rem;margin:.2rem 0}
+.detail .btns{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+.detail .btns button{border-radius:7px;border:1px solid var(--line);background:#fff;padding:.45rem .9rem}
+.detail .btns .go{background:var(--brass);border-color:var(--brass);color:#fff;font-weight:600}
+.detail .btns .close{margin-left:auto}
+
+/* ---------- Chargement ---------- */
+#loader{position:fixed;inset:0;background:var(--paper);display:grid;place-items:center;z-index:10;padding:1rem}
+#loader .box{max-width:520px;display:grid;gap:.8rem;text-align:left}
+#loader h2{font:400 1.5rem var(--serif);margin:0}
+#loader p{margin:0}
+#loader code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:.1rem .35rem}
+#picker{display:none;gap:.6rem}
+#picker.on{display:grid}
+.drop{border:2px dashed var(--brass);border-radius:10px;padding:1.1rem;text-align:center;background:var(--panel)}
+.drop input{margin-top:.5rem}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="box">
+    <h2 id="loaderTitle">Chargement des cartes…</h2>
+    <p id="loaderMsg">Lecture de <code>cartes.json</code>, quelques secondes.</p>
+    <div id="picker">
+      <p>Le navigateur n'a pas pu ouvrir <code>cartes.json</code> automatiquement. Choisis le fichier à la main, ou ouvre cette page depuis un petit serveur local (<code>python3 -m http.server</code> dans le dossier, puis <code>http://localhost:8000/etabli.html</code>).</p>
+      <div class="drop">
+        <label for="filePick">Sélectionne ton fichier <strong>cartes.json</strong></label><br>
+        <input type="file" id="filePick" accept=".json,application/json">
+      </div>
+    </div>
+  </div>
+</div>
+
+<header class="top">
+  <h1>L'établi</h1>
+  <p class="sub" id="status">Recherche de cartes et construction de decks</p>
+  <label class="langpick">Langue des cartes
+    <select id="lang">
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+    </select>
+  </label>
+</header>
+
+<main class="layout">
+  <section aria-label="Recherche de cartes">
+    <div class="filters">
+      <div class="row">
+        <label class="f wide"><span>Titre</span><input type="search" id="fName" placeholder="ex. éclair, lightning bolt" autocomplete="off"></label>
+        <label class="f wide"><span>Type</span><input type="search" id="fSub" placeholder="ex. créature dragon, légendaire, terrain" autocomplete="off"></label>
+        <label class="f wide"><span>Texte</span><input type="search" id="fText" placeholder="ex. piochez une carte" autocomplete="off"></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>Catégorie</span>
+          <select id="fType">
+            <option value="">Tous</option>
+            <option value="Creature">Créature</option>
+            <option value="Instant">Éphémère</option>
+            <option value="Sorcery">Rituel</option>
+            <option value="Artifact">Artefact</option>
+            <option value="Enchantment">Enchantement</option>
+            <option value="Planeswalker">Planeswalker</option>
+            <option value="Land">Terrain</option>
+            <option value="Battle">Bataille</option>
+          </select>
+        </label>
+        <label class="f wide"><span>Extension ou édition</span>
+          <input type="search" id="fSet" list="setList" placeholder="ex. Innistrad, Alpha, MH3" autocomplete="off">
+          <datalist id="setList"></datalist>
+        </label>
+        <label class="f"><span>Rareté</span>
+          <select id="fRarity">
+            <option value="">Toutes</option>
+            <option value="common">Commune</option>
+            <option value="uncommon">Peu commune</option>
+            <option value="rare">Rare</option>
+            <option value="mythic">Mythique</option>
+          </select>
+        </label>
+        <label class="f"><span>Légale en</span><select id="fFormat"></select></label>
+      </div>
+      <div class="row">
+        <div class="f" style="flex:0 0 auto">
+          <span id="lblColors">Couleurs</span>
+          <div class="mana" role="group" aria-labelledby="lblColors" id="fColors">
+            <button type="button" data-c="W" aria-pressed="false" style="background:#f5efc9" aria-label="Blanc">W</button>
+            <button type="button" data-c="U" aria-pressed="false" style="background:#aad4ec" aria-label="Bleu">U</button>
+            <button type="button" data-c="B" aria-pressed="false" style="background:#a89d92" aria-label="Noir">B</button>
+            <button type="button" data-c="R" aria-pressed="false" style="background:#eda184" aria-label="Rouge">R</button>
+            <button type="button" data-c="G" aria-pressed="false" style="background:#94c9a1" aria-label="Vert">G</button>
+            <button type="button" data-c="C" aria-pressed="false" style="background:#cfcfc9" aria-label="Incolore">C</button>
+          </div>
+        </div>
+        <label class="f"><span>Comparaison des couleurs</span>
+          <select id="fColorMode">
+            <option value="include">Contient ces couleurs</option>
+            <option value="exact">Exactement ces couleurs</option>
+            <option value="within">Uniquement ces couleurs (ou incolore)</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="fIdentity"> Utiliser l'identité de couleur</label>
+      </div>
+      <div class="row">
+        <label class="f narrow"><span>Coût min</span><input type="number" id="fCmcMin" min="0" max="20" inputmode="numeric"></label>
+        <label class="f narrow"><span>Coût max</span><input type="number" id="fCmcMax" min="0" max="20" inputmode="numeric"></label>
+        <label class="f"><span>Trier par</span>
+          <select id="fSort">
+            <option value="name">Nom</option>
+            <option value="cmc">Coût de mana</option>
+            <option value="rarity">Rareté</option>
+          </select>
+        </label>
+        <button type="button" class="linkbtn" id="fReset">Réinitialiser les filtres</button>
+      </div>
+    </div>
+
+    <div class="resbar"><strong id="resCount">0 carte</strong><span class="sub" id="resHint"></span></div>
+    <div class="grid" id="results"></div>
+    <button type="button" class="more" id="more" hidden>Afficher plus de cartes</button>
+  </section>
+
+  <aside class="deck" aria-label="Deck en cours">
+    <div class="deck-head">
+      <input class="deck-name" id="deckName" value="Nouveau deck" aria-label="Nom du deck" maxlength="80">
+      <div class="deck-meta">
+        <select id="deckFormat" aria-label="Format du deck"></select>
+        <div class="count" id="deckCount"></div>
+      </div>
+    </div>
+    <div class="status" id="deckStatus" aria-live="polite"></div>
+    <div class="actions">
+      <button type="button" id="btnImport">Importer</button>
+      <button type="button" id="btnExport">Exporter</button>
+      <button type="button" class="go" id="btnSave">Enregistrer</button>
+      <button type="button" id="btnNew">Nouveau</button>
+    </div>
+    <div class="saved" id="savedBox">
+      <select id="savedList" aria-label="Decks enregistrés"></select>
+      <div class="actions">
+        <button type="button" id="btnOpen">Ouvrir</button>
+        <button type="button" id="btnDelete">Supprimer</button>
+      </div>
+    </div>
+    <div id="deckLists"></div>
+    <div class="stats" id="deckStats"></div>
+  </aside>
+</main>
+
+<dialog id="dlgDetail"><div class="detail" id="detailBody"></div></dialog>
+
+<dialog id="dlgImport">
+  <div class="dlg">
+    <h2>Importer un deck</h2>
+    <p class="hint">Colle une liste au format texte, une carte par ligne (<code>4 Lightning Bolt</code>). Une ligne vide ou « Sideboard » commence la réserve. Le deck actuel sera remplacé.</p>
+    <textarea id="importText" spellcheck="false" placeholder="4 Lightning Bolt&#10;20 Mountain&#10;&#10;Sideboard&#10;2 Smash to Smithereens"></textarea>
+    <p class="warn" id="importWarn"></p>
+    <div class="btns">
+      <button type="button" data-close>Annuler</button>
+      <button type="button" class="go" id="importGo">Importer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgExport">
+  <div class="dlg">
+    <h2>Exporter le deck</h2>
+    <p class="hint">Format texte compatible avec Arena, MTGO et la plupart des sites de decks.</p>
+    <textarea id="exportText" readonly spellcheck="false"></textarea>
+    <div class="btns">
+      <button type="button" data-close>Fermer</button>
+      <button type="button" id="exportDl">Télécharger .txt</button>
+      <button type="button" class="go" id="exportCopy">Copier</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+
+/* ============ Données et constantes ============ */
+const COLORS = {W:'#f5efc9', U:'#aad4ec', B:'#a89d92', R:'#eda184', G:'#94c9a1'};
+const COLOR_NAMES = {W:'Blanc', U:'Bleu', B:'Noir', R:'Rouge', G:'Vert'};
+
+const FORMATS = {
+  libre:     {label:'Format libre'},
+  standard:  {label:'Standard',  key:'standard',  min:60,  copies:4, side:15},
+  pioneer:   {label:'Pioneer',   key:'pioneer',   min:60,  copies:4, side:15},
+  modern:    {label:'Modern',    key:'modern',    min:60,  copies:4, side:15},
+  legacy:    {label:'Legacy',    key:'legacy',    min:60,  copies:4, side:15},
+  vintage:   {label:'Vintage',   key:'vintage',   min:60,  copies:4, side:15},
+  pauper:    {label:'Pauper',    key:'pauper',    min:60,  copies:4, side:15},
+  commander: {label:'Commander', key:'commander', min:100, max:100, copies:1, cmd:true},
+  brawl:     {label:'Brawl',     key:'brawl',     min:60,  max:60,  copies:1, cmd:true}
+};
+
+const GROUP_ORDER = ['Creature','Planeswalker','Battle','Instant','Sorcery','Artifact','Enchantment','Land','Other'];
+const GROUP_LABELS = {Creature:'Créatures', Planeswalker:'Planeswalkers', Battle:'Batailles', Instant:'Éphémères',
+  Sorcery:'Rituels', Artifact:'Artefacts', Enchantment:'Enchantements', Land:'Terrains', Other:'Autres'};
+const GROUP_PRIORITY = ['Land','Creature','Planeswalker','Battle','Instant','Sorcery','Artifact','Enchantment'];
+const RARITY_ORDER = {common:0, uncommon:1, rare:2, mythic:3};
+const RARITY_LABELS = {common:'Commune', uncommon:'Peu commune', rare:'Rare', mythic:'Mythique', special:'Spéciale', bonus:'Bonus'};
+
+let cards = [];
+let sets = [];              // extensions : {code, nom, nom_fr, date, type, nb}
+let setByCode = new Map();
+let byName = new Map();     // nom exact -> carte
+let lookup = new Map();     // nom en minuscules (et face avant) -> carte
+let results = [];
+let shown = 0;
+const PAGE = 60;
+
+let deck = {name:'Nouveau deck', format:'libre', main:{}, side:{}};
+
+/* ============ Utilitaires ============ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtNum = n => n.toLocaleString('fr-FR');
+const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’]/g, "'");
+const words = s => norm(s).split(/\s+/).filter(Boolean);
+const fmt = () => FORMATS[deck.format] || FORMATS.libre;
+
+let lang = 'fr';
+try{ lang = localStorage.getItem('etabli-lang') || 'fr'; }catch(e){}
+const dn = c => (c && lang === 'fr' && c.nom_fr) ? c.nom_fr : (c ? c.nom : '');
+const dText = c => (lang === 'fr' && c.texte_fr) ? c.texte_fr : (c.texte || '');
+const dType = c => (lang === 'fr' && c.type_fr) ? c.type_fr : (c.type || '');
+const dnByName = name => { const c = byName.get(name); return c ? dn(c) : name; };
+const collator = new Intl.Collator('fr', {sensitivity:'base'});
+
+function imgUrl(c, size){
+  const id = c.scryfall_id;
+  return id ? `https://cards.scryfall.io/${size}/front/${id[0]}/${id[1]}/${id}.jpg` : '';
+}
+
+function pips(cost){
+  if(!cost) return '';
+  return cost.split(/(\{[^}]+\})/).map(t => {
+    const m = /^\{([^}]+)\}$/.exec(t);
+    if(!m) return esc(t);
+    const inner = m[1];
+    const cs = inner.split('/').filter(p => COLORS[p]);
+    let style = '';
+    if(cs.length === 1) style = `background:${COLORS[cs[0]]}`;
+    else if(cs.length >= 2) style = `background:linear-gradient(135deg,${COLORS[cs[0]]} 50%,${COLORS[cs[1]]} 50%)`;
+    return `<span class="pip" style="${style}">${esc(inner.replace(/\//g,''))}</span>`;
+  }).join('');
+}
+
+function groupOf(c){
+  if(!c) return 'Other';
+  for(const t of GROUP_PRIORITY) if((c.types||[]).includes(t)) return t;
+  return 'Other';
+}
+
+function isBasic(c){ return /\bBasic\b/.test(c.type || ''); }
+function anyNumber(c){ return /any number of cards named/i.test(c.texte || ''); }
+
+/* ============ Chargement ============ */
+function init(data){
+  if(Array.isArray(data)){ cards = data; sets = []; }        // ancien format
+  else{ cards = data.cartes || []; sets = data.editions || []; }
+  // Sans liste d'extensions, on la déduit des cartes (codes seulement)
+  if(!sets.length){
+    const codes = new Set();
+    cards.forEach(c => (c.editions || [c.edition]).forEach(x => x && codes.add(x)));
+    sets = [...codes].map(code => ({code, nom: code, nom_fr: null, date: '', nb: 0}));
+  }
+  sets.forEach(s => {
+    s._k = norm(`${s.code} ${s.nom} ${s.nom_fr || ''}`);
+    setByCode.set(s.code, s);
+  });
+  cards.forEach((c, i) => {
+    c._i = i;
+    // Textes de recherche sans accents, anglais et français réunis
+    c._n = norm(c.nom) + ' | ' + norm(c.nom_fr);
+    c._t = norm(c.texte) + ' | ' + norm(c.texte_fr);
+    c._ty = norm(c.type) + ' | ' + norm(c.type_fr);
+    byName.set(c.nom, c);
+    lookup.set(norm(c.nom), c);
+  });
+  // Pour l'import : noms français, et faces avant ("Fire // Ice" -> "fire")
+  cards.forEach(c => {
+    const keys = [c.nom];
+    if(c.nom_fr) keys.push(c.nom_fr);
+    keys.forEach(nm => {
+      const k = norm(nm);
+      if(!lookup.has(k)) lookup.set(k, c);
+      if(nm.includes(' // ')){
+        const front = norm(nm.split(' // ')[0]);
+        if(!lookup.has(front)) lookup.set(front, c);
+      }
+    });
+  });
+  fillSetList();
+  refreshStatus();
+  $('loader').style.display = 'none';
+  applyFilters();
+  renderDeck();
+}
+
+async function boot(){
+  restoreDeck();
+  setupFormats();
+  try{
+    const r = await fetch('cartes.json');
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    init(await r.json());
+  }catch(e){
+    $('loaderTitle').textContent = 'Choisis ton fichier de cartes';
+    $('loaderMsg').style.display = 'none';
+    $('picker').classList.add('on');
+  }
+}
+
+$('filePick').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  $('loaderTitle').textContent = 'Lecture du fichier…';
+  try{
+    init(JSON.parse(await file.text()));
+  }catch(err){
+    $('loaderTitle').textContent = 'Ce fichier n\'a pas pu être lu';
+    $('loaderMsg').style.display = '';
+    $('loaderMsg').textContent = 'Vérifie que c\'est bien le cartes.json créé par le script.';
+  }
+});
+
+/* ============ Formats ============ */
+function setupFormats(){
+  const opts = Object.entries(FORMATS).map(([k, f]) => `<option value="${k}">${esc(f.label)}</option>`).join('');
+  $('deckFormat').innerHTML = opts;
+  $('deckFormat').value = deck.format;
+  const legal = Object.entries(FORMATS).filter(([k]) => k !== 'libre')
+    .map(([k, f]) => `<option value="${k}">${esc(f.label)}</option>`).join('');
+  $('fFormat').innerHTML = '<option value="">Tous les formats</option><option value="deck">Format de mon deck</option>' + legal;
+}
+
+/* ============ Extensions ============ */
+const setName = s => (lang === 'fr' && s.nom_fr) ? s.nom_fr : s.nom;
+
+function fillSetList(){
+  const sorted = [...sets].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  $('setList').innerHTML = sorted.map(s =>
+    `<option value="${esc(setName(s))}" label="${esc(s.code + (s.date ? ', ' + s.date.slice(0, 4) : ''))}"></option>`).join('');
+}
+
+// Renvoie l'ensemble des codes d'extensions qui correspondent au texte saisi,
+// ou null si le champ est vide. Un nom ou un code exact est prioritaire.
+function setFilter(){
+  const raw = $('fSet').value.trim();
+  if(!raw) return null;
+  const q = norm(raw);
+  const exact = sets.filter(s => norm(s.code) === q || norm(s.nom) === q || (s.nom_fr && norm(s.nom_fr) === q));
+  if(exact.length) return new Set(exact.map(s => s.code));
+  const ws = words(raw);
+  return new Set(sets.filter(s => ws.every(w => s._k.includes(w))).map(s => s.code));
+}
+
+/* ============ Recherche ============ */
+let selectedColors = new Set();
+
+function readFilters(){
+  let formatKey = $('fFormat').value;
+  if(formatKey === 'deck') formatKey = fmt().key || '';
+  return {
+    name: words($('fName').value),
+    text: words($('fText').value),
+    sub: words($('fSub').value),
+    type: $('fType').value,
+    rarity: $('fRarity').value,
+    sets: setFilter(),
+    format: formatKey,
+    colors: selectedColors,
+    mode: $('fColorMode').value,
+    identity: $('fIdentity').checked,
+    cmin: $('fCmcMin').value === '' ? null : Number($('fCmcMin').value),
+    cmax: $('fCmcMax').value === '' ? null : Number($('fCmcMax').value),
+    sort: $('fSort').value
+  };
+}
+
+function matches(c, f){
+  for(const w of f.name) if(!c._n.includes(w)) return false;
+  for(const w of f.text) if(!c._t.includes(w)) return false;
+  for(const w of f.sub) if(!c._ty.includes(w)) return false;
+  if(f.type && !(c.types || []).includes(f.type)) return false;
+  if(f.rarity && c.rarete !== f.rarity) return false;
+  if(f.sets){
+    const eds = c.editions || [c.edition];
+    if(!eds.some(x => f.sets.has(x))) return false;
+  }
+  if(f.format){
+    const st = (c.legalites || {})[f.format];
+    if(st !== 'Legal' && st !== 'Restricted') return false;
+  }
+  if(f.cmin !== null && (c.cmc ?? 0) < f.cmin) return false;
+  if(f.cmax !== null && (c.cmc ?? 0) > f.cmax) return false;
+  if(f.colors.size){
+    const cc = (f.identity ? c.identite : c.couleurs) || [];
+    if(f.colors.has('C')){
+      if(cc.length) return false;
+    }else if(f.mode === 'include'){
+      for(const x of f.colors) if(!cc.includes(x)) return false;
+    }else if(f.mode === 'exact'){
+      if(cc.length !== f.colors.size) return false;
+      for(const x of f.colors) if(!cc.includes(x)) return false;
+    }else{
+      for(const x of cc) if(!f.colors.has(x)) return false;
+    }
+  }
+  return true;
+}
+
+function applyFilters(){
+  if(!cards.length) return;
+  const f = readFilters();
+  let out = cards.filter(c => matches(c, f));
+  if(f.sort === 'cmc') out.sort((a, b) => (a.cmc - b.cmc) || collator.compare(dn(a), dn(b)));
+  else if(f.sort === 'rarity') out.sort((a, b) => ((RARITY_ORDER[b.rarete] ?? -1) - (RARITY_ORDER[a.rarete] ?? -1)) || collator.compare(dn(a), dn(b)));
+  else out.sort((a, b) => collator.compare(dn(a), dn(b)));
+  results = out;
+  shown = 0;
+  $('results').innerHTML = '';
+  $('resCount').textContent = `${fmtNum(out.length)} carte${out.length > 1 ? 's' : ''}`;
+  if(!out.length){
+    $('results').innerHTML = (f.sets && !f.sets.size)
+      ? `<div class="empty">Aucune extension ne correspond à « ${esc($('fSet').value)} ». Choisis un nom dans la liste proposée ou saisis un code (ex. MH3).</div>`
+      : '<div class="empty">Aucune carte ne correspond. Essaie d\'enlever un filtre.</div>';
+    $('more').hidden = true;
+    $('resHint').textContent = '';
+    return;
+  }
+  renderMore();
+}
+
+function tileHTML(c){
+  const url = imgUrl(c, 'normal');
+  const name = dn(c);
+  const inner = url
+    ? `<img loading="lazy" src="${url}" alt="${esc(name)}">`
+    : `<div class="noimg">${esc(name)}</div>`;
+  return `<article class="tile" data-i="${c._i}">
+    <button type="button" class="art" data-act="open" aria-label="Voir ${esc(name)}">${inner}<span class="badge"></span></button>
+    <div class="tname" title="${esc(name)}">${esc(name)}</div>
+    <div class="tbtns">
+      <button type="button" data-act="add-main">+ Deck</button>
+      <button type="button" data-act="add-side">+ <span class="z2"></span></button>
+    </div>
+  </article>`;
+}
+
+function renderMore(){
+  const slice = results.slice(shown, shown + PAGE);
+  $('results').insertAdjacentHTML('beforeend', slice.map(tileHTML).join(''));
+  shown += slice.length;
+  $('more').hidden = shown >= results.length;
+  $('resHint').textContent = shown < results.length ? `${fmtNum(shown)} affichées` : '';
+  refreshTiles();
+}
+
+function zone2Label(){ return fmt().cmd ? 'Commandant' : 'Réserve'; }
+
+function refreshTiles(){
+  document.querySelectorAll('#results .tile').forEach(t => {
+    const c = cards[Number(t.dataset.i)];
+    const m = deck.main[c.nom] || 0, s = deck.side[c.nom] || 0;
+    const b = t.querySelector('.badge');
+    b.textContent = s ? `${m} + ${s}` : String(m);
+    b.classList.toggle('on', m + s > 0);
+    t.querySelector('.z2').textContent = zone2Label();
+  });
+}
+
+$('results').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const c = cards[Number(btn.closest('.tile').dataset.i)];
+  const act = btn.dataset.act;
+  if(act === 'open') openDetail(c);
+  else if(act === 'add-main') change('main', c.nom, 1);
+  else if(act === 'add-side') change('side', c.nom, 1);
+});
+
+$('results').addEventListener('error', e => {
+  if(e.target.tagName !== 'IMG') return;
+  const name = e.target.alt;
+  const div = document.createElement('div');
+  div.className = 'noimg';
+  div.textContent = name;
+  e.target.replaceWith(div);
+}, true);
+
+$('more').addEventListener('click', renderMore);
+
+let timer;
+function debounced(){ clearTimeout(timer); timer = setTimeout(applyFilters, 150); }
+['fName','fText','fSub','fSet'].forEach(id => $(id).addEventListener('input', debounced));
+['fType','fRarity','fFormat','fColorMode','fIdentity','fCmcMin','fCmcMax','fSort'].forEach(id => $(id).addEventListener('change', applyFilters));
+$('fCmcMin').addEventListener('input', debounced);
+$('fCmcMax').addEventListener('input', debounced);
+
+$('fColors').addEventListener('click', e => {
+  const b = e.target.closest('button[data-c]');
+  if(!b) return;
+  const c = b.dataset.c;
+  if(c === 'C'){
+    const on = !selectedColors.has('C');
+    selectedColors.clear();
+    if(on) selectedColors.add('C');
+  }else{
+    selectedColors.delete('C');
+    if(selectedColors.has(c)) selectedColors.delete(c); else selectedColors.add(c);
+  }
+  $('fColors').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(selectedColors.has(x.dataset.c))));
+  applyFilters();
+});
+
+$('fReset').addEventListener('click', () => {
+  ['fName','fText','fSub','fSet','fCmcMin','fCmcMax'].forEach(id => $(id).value = '');
+  ['fType','fRarity','fFormat'].forEach(id => $(id).value = '');
+  $('fColorMode').value = 'include';
+  $('fSort').value = 'name';
+  $('fIdentity').checked = false;
+  selectedColors.clear();
+  $('fColors').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+  applyFilters();
+});
+
+/* ============ Fiche détaillée ============ */
+function openDetail(c){
+  if(!c) return;
+  const legs = Object.entries(c.legalites || {}).map(([k, v]) =>
+    `<span class="${v === 'Banned' ? 'b' : v === 'Restricted' ? 'r' : ''}">${esc(k)}${v === 'Banned' ? ' (bannie)' : v === 'Restricted' ? ' (restreinte)' : ''}</span>`).join('');
+  const pt = (c.force != null && c.endurance != null) ? `<p><strong>${esc(c.force)}/${esc(c.endurance)}</strong></p>` : '';
+  const url = imgUrl(c, 'large');
+  const eds = (c.editions && c.editions.length ? c.editions : [c.edition]).filter(Boolean);
+  const edNames = eds.slice().reverse().slice(0, 10).map(x => { const s = setByCode.get(x); return s ? setName(s) : x; });
+  const edLine = eds.length
+    ? `Imprimée dans ${eds.length} extension${eds.length > 1 ? 's' : ''}, de la plus récente à la plus ancienne : ${edNames.join(', ')}${eds.length > 10 ? '…' : ''}`
+    : '';
+  $('detailBody').innerHTML = `
+    <div>${url ? `<img src="${url}" alt="${esc(dn(c))}">` : ''}</div>
+    <div>
+      <h2>${esc(dn(c))}</h2>
+      ${dn(c) !== c.nom ? `<p class="hint">Nom original : ${esc(c.nom)}</p>` : ''}
+      <p class="type">${pips(c.cout)} ${c.cout ? '&nbsp;' : ''}${esc(dType(c))}</p>
+      <div class="oracle">${esc(dText(c) || 'Pas de texte de règle.')}</div>
+      ${lang === 'fr' && !c.texte_fr && c.texte ? '<p class="hint">Pas de traduction française pour cette carte : texte original affiché.</p>' : ''}
+      ${pt}
+      <p class="hint">${esc(RARITY_LABELS[c.rarete] || c.rarete || '')}</p>
+      ${edLine ? `<p class="hint">${esc(edLine)}</p>` : ''}
+      <div class="leg" aria-label="Légalités">${legs || '<span>Aucune légalité renseignée</span>'}</div>
+      <div class="btns">
+        <button type="button" class="go" data-add="main">+ Deck</button>
+        <button type="button" data-add="side">+ ${zone2Label()}</button>
+        <button type="button" class="close" data-close>Fermer</button>
+      </div>
+    </div>`;
+  $('detailBody').dataset.name = c.nom;
+  $('dlgDetail').showModal();
+}
+
+$('detailBody').addEventListener('click', e => {
+  const name = $('detailBody').dataset.name;
+  const add = e.target.closest('[data-add]');
+  if(add) change(add.dataset.add, name, 1);
+  if(e.target.closest('[data-close]')) $('dlgDetail').close();
+});
+
+document.querySelectorAll('dialog').forEach(d => {
+  d.addEventListener('click', e => {
+    if(e.target === d) d.close();
+    if(e.target.closest('[data-close]') && d.id !== 'dlgDetail') d.close();
+  });
+});
+
+/* ============ Deck : données ============ */
+function change(zone, name, delta){
+  const z = deck[zone];
+  const n = Math.max(0, (z[name] || 0) + delta);
+  if(n === 0) delete z[name]; else z[name] = n;
+  persist();
+  renderDeck();
+  refreshTiles();
+}
+
+function total(z){ return Object.values(z).reduce((a, b) => a + b, 0); }
+
+function persist(){
+  try{ localStorage.setItem('etabli-current', JSON.stringify(deck)); }catch(e){}
+}
+
+function restoreDeck(){
+  try{
+    const raw = localStorage.getItem('etabli-current');
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    deck = {
+      name: typeof d.name === 'string' ? d.name : 'Nouveau deck',
+      format: FORMATS[d.format] ? d.format : 'libre',
+      main: d.main && typeof d.main === 'object' ? d.main : {},
+      side: d.side && typeof d.side === 'object' ? d.side : {}
+    };
+  }catch(e){}
+}
+
+function getSaved(){
+  try{ return JSON.parse(localStorage.getItem('etabli-decks') || '{}') || {}; }catch(e){ return {}; }
+}
+function setSaved(o){
+  try{ localStorage.setItem('etabli-decks', JSON.stringify(o)); return true; }catch(e){ return false; }
+}
+
+/* ============ Deck : validation ============ */
+function analyse(){
+  const f = fmt();
+  const problems = [];
+  const bad = new Set();
+  const names = new Set([...Object.keys(deck.main), ...Object.keys(deck.side)]);
+
+  if(f.key || f.copies){
+    for(const n of names){
+      const c = byName.get(n);
+      if(!c) continue;
+      const qty = (deck.main[n] || 0) + (deck.side[n] || 0);
+      const st = f.key ? (c.legalites || {})[f.key] : 'Legal';
+      const shown = dn(c);
+      if(f.key && st === 'Banned'){ problems.push(`${shown} est bannie en ${f.label}.`); bad.add(n); continue; }
+      if(f.key && !st){ problems.push(`${shown} n'est pas légale en ${f.label}.`); bad.add(n); continue; }
+      if(f.copies && !isBasic(c) && !anyNumber(c)){
+        const max = st === 'Restricted' ? 1 : f.copies;
+        if(qty > max){ problems.push(`${qty} exemplaires de ${shown} (maximum ${max}).`); bad.add(n); }
+      }
+    }
+  }
+
+  const mainN = total(deck.main), sideN = total(deck.side);
+  const count = f.cmd ? mainN + sideN : mainN;
+  if(f.min && count < f.min) problems.push(`Il manque ${f.min - count} carte${f.min - count > 1 ? 's' : ''} (minimum ${f.min}).`);
+  if(f.max && count > f.max) problems.push(`${count - f.max} carte${count - f.max > 1 ? 's' : ''} en trop (maximum ${f.max}).`);
+  if(!f.cmd && f.side != null && sideN > f.side) problems.push(`La réserve est limitée à ${f.side} cartes (${sideN} actuellement).`);
+  if(f.cmd && sideN > 2) problems.push('Il ne devrait y avoir qu\'un commandant (ou deux avec partenaire).');
+
+  return {problems, bad, count};
+}
+
+/* ============ Deck : affichage ============ */
+function poolCards(){
+  const f = fmt();
+  const pool = [];
+  const add = z => { for(const [n, q] of Object.entries(z)) pool.push([byName.get(n), q, n]); };
+  add(deck.main);
+  if(f.cmd) add(deck.side);
+  return pool;
+}
+
+function rowHTML(zone, name, qty, bad){
+  const c = byName.get(name);
+  const shownName = c ? dn(c) : name;
+  const other = zone === 'main' ? 'la ' + zone2Label().toLowerCase() : 'le deck';
+  return `<li class="card-row${bad.has(name) ? ' bad' : ''}" data-z="${zone}" data-n="${esc(name)}">
+    <span class="q">${qty}</span>
+    <button type="button" class="nm" data-act="open" title="${esc(shownName)}">${esc(shownName)}${c ? '' : ' (inconnue)'}</button>
+    <span class="cost">${c ? pips(c.cout) : ''}</span>
+    <span class="ctl">
+      <button type="button" data-act="dec" aria-label="Retirer un exemplaire de ${esc(shownName)}">−</button>
+      <button type="button" data-act="inc" aria-label="Ajouter un exemplaire de ${esc(shownName)}">+</button>
+      <button type="button" data-act="move" aria-label="Déplacer un exemplaire de ${esc(shownName)} vers ${other}" title="Déplacer vers ${other}">⇄</button>
+    </span>
+  </li>`;
+}
+
+function listHTML(zone, bad){
+  const entries = Object.entries(deck[zone]);
+  if(!entries.length) return '';
+  const groups = {};
+  entries.forEach(([n, q]) => { const g = groupOf(byName.get(n)); (groups[g] = groups[g] || []).push([n, q]); });
+  let html = '';
+  for(const g of GROUP_ORDER){
+    const list = groups[g];
+    if(!list) continue;
+    list.sort((a, b) => ((byName.get(a[0])?.cmc ?? 99) - (byName.get(b[0])?.cmc ?? 99)) || collator.compare(dnByName(a[0]), dnByName(b[0])));
+    const n = list.reduce((s, x) => s + x[1], 0);
+    html += `<h4>${GROUP_LABELS[g]} (${n})</h4><ul>${list.map(([nm, q]) => rowHTML(zone, nm, q, bad)).join('')}</ul>`;
+  }
+  return html;
+}
+
+function renderDeck(){
+  const f = fmt();
+  const {problems, bad, count} = analyse();
+  const mainN = total(deck.main), sideN = total(deck.side);
+
+  $('deckName').value = deck.name;
+  $('deckFormat').value = deck.format;
+  const target = f.max || f.min;
+  $('deckCount').innerHTML = target
+    ? `${count} / ${target}<small>cartes</small>`
+    : `${count}<small>carte${count > 1 ? 's' : ''}</small>`;
+
+  let status = '';
+  if(!mainN && !sideN) status = '<div>Ajoute des cartes depuis les résultats de recherche.</div>';
+  else if(!problems.length && (f.key || f.min)) status = `<div class="ok">Deck valide en ${esc(f.label)}.</div>`;
+  else status = problems.map(p => `<div class="no">${esc(p)}</div>`).join('');
+  $('deckStatus').innerHTML = status;
+
+  let html = '';
+  html += `<section class="zone"><h3>Deck <span>${mainN} carte${mainN > 1 ? 's' : ''}</span></h3>`;
+  html += mainN ? listHTML('main', bad) : '<div class="emptydeck">Aucune carte pour le moment.</div>';
+  html += '</section>';
+  if(sideN || true){
+    html += `<section class="zone"><h3>${zone2Label()} <span>${sideN} carte${sideN > 1 ? 's' : ''}</span></h3>`;
+    html += sideN ? listHTML('side', bad) : `<div class="emptydeck">${f.cmd ? 'Ajoute ton commandant ici.' : 'Vide.'}</div>`;
+    html += '</section>';
+  }
+  $('deckLists').innerHTML = html;
+
+  renderStats();
+  renderSavedList();
+}
+
+function renderStats(){
+  const pool = poolCards().filter(([c]) => c);
+  const nonland = pool.filter(([c]) => !(c.types || []).includes('Land'));
+  const lands = pool.filter(([c]) => (c.types || []).includes('Land')).reduce((s, [, q]) => s + q, 0);
+  const spells = nonland.reduce((s, [, q]) => s + q, 0);
+  if(!pool.length){ $('deckStats').innerHTML = ''; return; }
+
+  const cmcSum = nonland.reduce((s, [c, q]) => s + (c.cmc || 0) * q, 0);
+  const avg = spells ? (cmcSum / spells) : 0;
+
+  const curve = new Array(8).fill(0);
+  nonland.forEach(([c, q]) => curve[Math.min(7, Math.floor(c.cmc || 0))] += q);
+  const max = Math.max(1, ...curve);
+  const bars = curve.map((v, i) =>
+    `<div class="bar"><em>${v || ''}</em><i style="height:${Math.round(v / max * 80)}%"></i><b>${i === 7 ? '7+' : i}</b></div>`).join('');
+
+  const pipCount = {W:0, U:0, B:0, R:0, G:0};
+  nonland.forEach(([c, q]) => {
+    (c.cout || '').replace(/\{([^}]+)\}/g, (m, s) => { s.split('/').forEach(p => { if(pipCount[p] !== undefined) pipCount[p] += q; }); return m; });
+  });
+  const pipTotal = Object.values(pipCount).reduce((a, b) => a + b, 0);
+  const pipBar = pipTotal
+    ? `<div class="pipbar">${Object.entries(pipCount).filter(([, v]) => v).map(([k, v]) => `<i style="width:${v / pipTotal * 100}%;background:${COLORS[k]}" title="${COLOR_NAMES[k]} : ${v}"></i>`).join('')}</div>
+       <div class="legend">${Object.entries(pipCount).filter(([, v]) => v).map(([k, v]) => `<span><span class="pip" style="background:${COLORS[k]}">${k}</span> ${v}</span>`).join('')}</div>`
+    : '<div class="emptydeck">Pas de symboles de mana colorés.</div>';
+
+  const typeCount = {};
+  pool.forEach(([c, q]) => { const g = groupOf(c); typeCount[g] = (typeCount[g] || 0) + q; });
+  const chips = GROUP_ORDER.filter(g => typeCount[g]).map(g => `<span>${GROUP_LABELS[g]} ${typeCount[g]}</span>`).join('');
+
+  $('deckStats').innerHTML = `
+    <div class="nums">
+      <div><b>${pool.reduce((s, [, q]) => s + q, 0)}</b><span>cartes</span></div>
+      <div><b>${lands}</b><span>terrains</span></div>
+      <div><b>${spells}</b><span>sorts</span></div>
+      <div><b>${avg.toFixed(2).replace('.', ',')}</b><span>coût moyen</span></div>
+    </div>
+    <div><h4>Courbe de mana (hors terrains)</h4><div class="curve">${bars}</div></div>
+    <div><h4>Symboles de mana</h4>${pipBar}</div>
+    <div><h4>Types de cartes</h4><div class="chips">${chips}</div></div>`;
+}
+
+$('deckLists').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const row = btn.closest('.card-row');
+  const zone = row.dataset.z, name = row.dataset.n;
+  const act = btn.dataset.act;
+  if(act === 'inc') change(zone, name, 1);
+  else if(act === 'dec') change(zone, name, -1);
+  else if(act === 'open'){ const c = byName.get(name); if(c) openDetail(c); }
+  else if(act === 'move'){
+    const to = zone === 'main' ? 'side' : 'main';
+    const z = deck[zone];
+    if(!z[name]) return;
+    z[name]--; if(z[name] <= 0) delete z[name];
+    deck[to][name] = (deck[to][name] || 0) + 1;
+    persist(); renderDeck(); refreshTiles();
+  }
+});
+
+$('deckName').addEventListener('input', e => { deck.name = e.target.value; persist(); });
+$('deckFormat').addEventListener('change', e => {
+  deck.format = e.target.value;
+  persist(); renderDeck(); refreshTiles();
+  if($('fFormat').value === 'deck') applyFilters();
+});
+
+/* ============ Decks enregistrés ============ */
+function renderSavedList(){
+  const saved = getSaved();
+  const names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+  $('savedList').innerHTML = names.length
+    ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')
+    : '<option value="">Aucun deck enregistré</option>';
+  $('btnOpen').disabled = $('btnDelete').disabled = !names.length;
+}
+
+$('btnSave').addEventListener('click', () => {
+  const name = (deck.name || '').trim() || 'Sans titre';
+  const saved = getSaved();
+  saved[name] = JSON.parse(JSON.stringify(deck));
+  saved[name].name = name;
+  if(setSaved(saved)){ deck.name = name; persist(); renderDeck(); $('savedList').value = name; }
+  else alert('Impossible d\'enregistrer : le navigateur bloque le stockage local. Utilise « Exporter » pour garder ta liste.');
+});
+
+$('btnOpen').addEventListener('click', () => {
+  const d = getSaved()[$('savedList').value];
+  if(!d) return;
+  deck = {name: d.name, format: FORMATS[d.format] ? d.format : 'libre', main: d.main || {}, side: d.side || {}};
+  persist(); renderDeck(); refreshTiles();
+});
+
+$('btnDelete').addEventListener('click', () => {
+  const n = $('savedList').value;
+  if(!n || !confirm(`Supprimer le deck « ${n} » ?`)) return;
+  const saved = getSaved();
+  delete saved[n];
+  setSaved(saved);
+  renderSavedList();
+});
+
+$('btnNew').addEventListener('click', () => {
+  if((total(deck.main) + total(deck.side)) && !confirm('Vider le deck actuel ? Pense à l\'enregistrer avant.')) return;
+  deck = {name: 'Nouveau deck', format: deck.format, main: {}, side: {}};
+  persist(); renderDeck(); refreshTiles();
+});
+
+/* ============ Import / export ============ */
+function exportText(){
+  const mk = z => Object.entries(z).sort((a, b) => a[0].localeCompare(b[0])).map(([n, q]) => `${q} ${n}`);
+  const lines = ['Deck', ...mk(deck.main)];
+  if(Object.keys(deck.side).length) lines.push('', fmt().cmd ? 'Commander' : 'Sideboard', ...mk(deck.side));
+  return lines.join('\n');
+}
+
+$('btnExport').addEventListener('click', () => {
+  $('exportText').value = exportText();
+  $('dlgExport').showModal();
+});
+
+$('exportCopy').addEventListener('click', async () => {
+  const ta = $('exportText');
+  try{ await navigator.clipboard.writeText(ta.value); }
+  catch(e){ ta.select(); document.execCommand('copy'); }
+  $('exportCopy').textContent = 'Copié';
+  setTimeout(() => $('exportCopy').textContent = 'Copier', 1500);
+});
+
+$('exportDl').addEventListener('click', () => {
+  const blob = new Blob([$('exportText').value], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (deck.name || 'deck').replace(/[^\w\-]+/g, '_') + '.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+$('btnImport').addEventListener('click', () => {
+  $('importText').value = '';
+  $('importWarn').textContent = '';
+  $('dlgImport').showModal();
+});
+
+function findCard(raw){
+  let n = raw.trim().replace(/\s*\*[A-Za-z]+\*\s*$/, '').replace(/\s+/g, ' ');
+  let c = lookup.get(norm(n));
+  if(!c && n.includes('/') && !n.includes(' // ')) c = lookup.get(norm(n.replace(/\s*\/+\s*/, ' // ')));
+  return c;
+}
+
+$('importGo').addEventListener('click', () => {
+  if(!cards.length){ $('importWarn').textContent = 'Les cartes ne sont pas encore chargées.'; return; }
+  const main = {}, side = {}, unknown = [];
+  let zone = main, explicit = false, seenMain = false;
+  for(const rawLine of $('importText').value.split(/\r?\n/)){
+    let line = rawLine.trim();
+    if(!line){ if(seenMain && !explicit && zone === main) zone = side; continue; }
+    if(/^(\/\/|#)/.test(line)) continue;
+    if(/^(sideboard|side|réserve|reserve|commander|commandant|companion)\b:?$/i.test(line)){ zone = side; explicit = true; continue; }
+    if(/^(deck|main|mainboard|maindeck)\b:?$/i.test(line)){ zone = main; explicit = true; continue; }
+    let z = zone;
+    if(/^SB:\s*/i.test(line)){ z = side; line = line.replace(/^SB:\s*/i, ''); }
+    const m = /^(\d+)\s*x?\s+(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?\s*$/.exec(line);
+    if(!m){ unknown.push(line); continue; }
+    const c = findCard(m[2]);
+    if(!c){ unknown.push(m[2]); continue; }
+    z[c.nom] = (z[c.nom] || 0) + Number(m[1]);
+    if(z === main) seenMain = true;
+  }
+  if(!Object.keys(main).length && !Object.keys(side).length){
+    $('importWarn').textContent = 'Aucune carte reconnue. Vérifie l\'orthographe des noms (français ou anglais) et le format « 4 Nom de la carte ».';
+    return;
+  }
+  deck.main = main; deck.side = side;
+  persist(); renderDeck(); refreshTiles();
+  if(unknown.length){
+    $('importWarn').textContent = `${unknown.length} ligne(s) non reconnue(s) : ${unknown.slice(0, 8).join(', ')}${unknown.length > 8 ? '…' : ''}`;
+  }else{
+    $('dlgImport').close();
+  }
+});
+
+/* ============ Langue ============ */
+function refreshStatus(){
+  const fr = cards.filter(c => c.nom_fr).length;
+  const ext = sets.some(s => s.nb) ? `, ${fmtNum(sets.length)} extensions` : '';
+  $('status').textContent = fr
+    ? `${fmtNum(cards.length)} cartes chargées, dont ${fmtNum(fr)} traduites en français${ext}`
+    : `${fmtNum(cards.length)} cartes chargées (pas de traductions : relance le script pour les ajouter)${ext}`;
+}
+
+$('lang').value = lang;
+$('lang').addEventListener('change', e => {
+  lang = e.target.value;
+  try{ localStorage.setItem('etabli-lang', lang); }catch(err){}
+  if(!cards.length) return;
+  fillSetList();
+  applyFilters();
+  renderDeck();
+});
+
+/* ============ Démarrage ============ */
+boot();
+</script>
+</body>
+</html>
